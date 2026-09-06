@@ -7,6 +7,9 @@ IP = "192.168.40.115"
 PORT = 8000
 BUFFER_SIZE = 4096
 
+def dns_parser(data):
+    return DNSRecord.parse(data)
+
 def send_dns_message(query_name, address, port):
     # Acá ya no tenemos que crear el encabezado porque dnslib lo hace por nosotros, por default pregunta por el tipo A
     qname = query_name
@@ -19,7 +22,7 @@ def send_dns_message(query_name, address, port):
         # En data quedará la respuesta a nuestra consulta
         data, _ = sock.recvfrom(BUFFER_SIZE)
         # le pedimos a dnslib que haga el trabajo de parsing por nosotros
-        d = DNSRecord.parse(data)
+        d = dns_parser(data)
     finally:
         sock.close()
     # Ojo que los datos de la respuesta van en en una estructura de datos
@@ -175,7 +178,7 @@ if __name__ == "__main__":
 
             print("\n\nMENSAJE DNS RECIBIDO")
             print(f"CLIENTE: {client_address}")
-            dns_request = DNSRecord.parse(data)
+            dns_request = dns_parser(data)
             print_dns_message(dns_request)
 
             query_name = str(dns_request.q.qname)
