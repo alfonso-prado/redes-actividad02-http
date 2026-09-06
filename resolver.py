@@ -176,7 +176,9 @@ if __name__ == "__main__":
         while True:
             data, client_address = server_socket.recvfrom(BUFFER_SIZE)
 
-            print("\n\nMENSAJE DNS RECIBIDO")
+            print("\n\n\n\n----------------------------------------")
+            print("----------------------------------------")
+            print("MENSAJE DNS RECIBIDO")
             print(f"CLIENTE: {client_address}")
             dns_request = dns_parser(data)
             print_dns_message(dns_request)
@@ -184,9 +186,13 @@ if __name__ == "__main__":
             query_name = str(dns_request.q.qname)
 
             dns_reply = send_dns_message(query_name, "1.1.1.1", 53)
-            print("\n\nMENSAJE DNS ENVIADO A NAMESERVER")
+            print("\n\n\n\n----------------------------------------")
+            print("----------------------------------------")
+            print("MENSAJE DNS ENVIADO A NAMESERVER")
             print_dns_message(dns_reply)
 
+            print("\n\n\n\n----------------------------------------")
+            print("----------------------------------------")
             print(f"\n\nRESPUESTA DNS ENVIADO A NAMESERVER A {client_address}")
             print_dns_message(dns_reply)
             dns_reply.header.id = dns_request.header.id
