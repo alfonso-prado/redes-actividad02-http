@@ -38,6 +38,13 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
     # Convertimos dns_reply_byte a la estructura de datos de DNSLibs
     dns_reply = dns_parser(dns_reply_byte)
 
+    # B de parte 4
+    number_of_answer_elements = dns_reply.header.a
+    if number_of_answer_elements > 0:
+        for rr in dns_reply.rr:    
+            if QTYPE.get(rr.rtype) == "A":
+                return dns_reply_byte
+
     # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB DESPUES DE ENVIARLO
 
     dns_reply_byte = bytes(dns_reply.pack())
