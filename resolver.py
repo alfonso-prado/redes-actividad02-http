@@ -25,15 +25,22 @@ def send_dns_message(message: bytes, address, port) -> bytes:
     return data
 
 def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
-    # Convertimos el byte a la estructura de datos de DNSLibs
+    # Convertimos mensaje_consulta en byte a la estructura de datos de DNSLibs
     dns_request = dns_parser(mensaje_consulta)
 
-    # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB
+    # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB ANTES DE ENVIARLO
 
     # Convertimos la estructura de DNSLibs a bytes
-    dns_request_byte = dns_request.pack()
-    # Enviamos el mensaje DNS a nameserver con el ip_addr
+    dns_request_byte = bytes(dns_request.pack())
+    # Enviamos el mensaje DNS a Nameserver con el ip_addr
     dns_reply_byte = send_dns_message(dns_request_byte, ip_addr, 53)
+
+    # Convertimos dns_reply_byte a la estructura de datos de DNSLibs
+    dns_reply = dns_parser(dns_reply_byte)
+
+    # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB DESPUES DE ENVIARLO
+
+    dns_reply_byte = bytes(dns_reply.pack())
 
     return dns_reply_byte
 
