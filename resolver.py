@@ -183,23 +183,23 @@ if __name__ == "__main__":
             dns_request = dns_parser(data)
             print_dns_message(dns_request)
 
-            query_name = str(dns_request.q.qname)
+            # query_name = str(dns_request.q.qname)
 
-            dns_reply = send_dns_message(query_name, "1.1.1.1", 53)
-            print("\n\n\n\n----------------------------------------")
-            print("----------------------------------------")
-            print("MENSAJE DNS ENVIADO A NAMESERVER")
-            print_dns_message(dns_reply)
+            # dns_reply = send_dns_message(query_name, "1.1.1.1", 53)
+            # print("\n\n\n\n----------------------------------------")
+            # print("----------------------------------------")
+            # print("MENSAJE DNS ENVIADO A NAMESERVER")
+            # print_dns_message(dns_reply)
 
-            print("\n\n\n\n----------------------------------------")
-            print("----------------------------------------")
-            print(f"\n\nRESPUESTA DNS ENVIADO A NAMESERVER A {client_address}")
-            print_dns_message(dns_reply)
-            dns_reply.header.id = dns_request.header.id
-            server_socket.sendto(
-                dns_reply.pack(),
-                client_address
-            )
+            # print("\n\n\n\n----------------------------------------")
+            # print("----------------------------------------")
+            # print(f"\n\nRESPUESTA DNS ENVIADO A NAMESERVER A {client_address}")
+            # print_dns_message(dns_reply)
+            # dns_reply.header.id = dns_request.header.id
+            # server_socket.sendto(
+            #     dns_reply.pack(),
+            #     client_address
+            # )
 
     finally:
         server_socket.close()
