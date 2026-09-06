@@ -26,7 +26,7 @@ def send_dns_message(query_name, address, port):
     return d
 
 
-def print_dns_reply_elements(dnslib_reply):
+def print_dns_message(dnslib_reply):
     # header section
     print(">>--------------- HEADER SECTION ---------------<<\n")
     print("----------- dnslib_reply.header -----------\n{}\n".format(dnslib_reply.header))
@@ -176,16 +176,16 @@ if __name__ == "__main__":
             print("\n\nMENSAJE DNS RECIBIDO")
             print(f"CLIENTE: {client_address}")
             dns_request = DNSRecord.parse(data)
-            print_dns_reply_elements(dns_request)
+            print_dns_message(dns_request)
 
             query_name = str(dns_request.q.qname)
 
             dns_reply = send_dns_message(query_name, "1.1.1.1", 53)
             print("\n\nMENSAJE DNS ENVIADO A NAMESERVER")
-            print_dns_reply_elements(dns_reply)
+            print_dns_message(dns_reply)
 
             print(f"\n\nRESPUESTA DNS ENVIADO A NAMESERVER A {client_address}")
-            print_dns_reply_elements(dns_reply)
+            print_dns_message(dns_reply)
             dns_reply.header.id = dns_request.header.id
             server_socket.sendto(
                 dns_reply.pack(),
