@@ -25,22 +25,17 @@ def send_dns_message(message: bytes, address, port) -> bytes:
     return data
 
 def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
-    # Convertimos el byte a la estructura de datos de DNSlibs
+    # Convertimos el byte a la estructura de datos de DNSLibs
     dns_request = dns_parser(mensaje_consulta)
-    # Obtenemos el query name
-    query_name_str = str(dns_request.q.qname)
-    # Creamos la pregunta que esta en un RR tipo A (dominio), que sera enviado al servidor dns destino
-    question_dns_mensaje = DNSRecord.question(query_name_str)
-    # Pasamos a bytes el question_dns_mensaje
-    question_dns_mensaje_byte = bytes(question_dns_mensaje.pack())
-    # Enviamos el mensaje DNS a nameserver con el ip_addr
-    dns_reply_byte = send_dns_message(question_dns_mensaje_byte, ip_addr, 53)
-    # le pedimos a dnslib que haga el trabajo de parsing por nosotros
-    dns_reply = dns_parser(dns_reply_byte)
-    # Mantenemos el ID del header del cliente
-    dns_reply.header.id = dns_request.header.id
 
-    return bytes(dns_reply.pack())
+    # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB
+
+    # Convertimos la estructura de DNSLibs a bytes
+    dns_request_byte = dns_request.pack()
+    # Enviamos el mensaje DNS a nameserver con el ip_addr
+    dns_reply_byte = send_dns_message(dns_request_byte, ip_addr, 53)
+
+    return dns_reply_byte
 
 def print_dns_message(dnslib_reply):
     # header section
