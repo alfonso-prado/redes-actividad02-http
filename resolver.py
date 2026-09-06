@@ -45,6 +45,18 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
             if QTYPE.get(rr.rtype) == "A":
                 return dns_reply_byte
 
+    # C de parte 4
+    number_of_authority_elements = dns_reply.header.auth
+    if number_of_authority_elements > 0:
+        for auth in dns_reply.auth:
+            if QTYPE.get(auth.rtype) == "NS":
+                for additional in dns_reply.ar:
+                    # Dato adiccional que tiene RR tipo A que contiene la IP del NS
+                    if QTYPE.get(additional.rtype) == "A":
+                        ns_ip = str(additional.rdata)
+
+                        return resolver(mensaje_consulta, ns_ip)
+
     # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB DESPUES DE ENVIARLO
 
     dns_reply_byte = bytes(dns_reply.pack())
