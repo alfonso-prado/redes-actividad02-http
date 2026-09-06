@@ -10,24 +10,37 @@ BUFFER_SIZE = 4096
 def dns_parser(data):
     return DNSRecord.parse(data)
 
-def send_dns_message(query_name, address, port):
+def send_dns_message(message: bytes, address, port) -> bytes:
     # Acá ya no tenemos que crear el encabezado porque dnslib lo hace por nosotros, por default pregunta por el tipo A
-    qname = query_name
-    q = DNSRecord.question(qname)
     server_address = (address, port)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # lo enviamos, hacemos cast a bytes de lo que resulte de la función pack() sobre el mensaje
-        sock.sendto(bytes(q.pack()), server_address)
+        sock.sendto(message, server_address)
         # En data quedará la respuesta a nuestra consulta
         data, _ = sock.recvfrom(BUFFER_SIZE)
-        # le pedimos a dnslib que haga el trabajo de parsing por nosotros
-        d = dns_parser(data)
     finally:
         sock.close()
     # Ojo que los datos de la respuesta van en en una estructura de datos
-    return d
+    return data
 
+def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
+    # Convertimos el byte a la estructura de datos de DNSlibs
+    dns_request = dns_parser(mensaje_consulta)
+    # Obtenemos el query name
+    query_name_str = str(dns_request.q.qname)
+    # Creamos la pregunta que esta en un RR tipo A (dominio), que sera enviado al servidor dns destino
+    question_dns_mensaje = DNSRecord.question(query_name_str)
+    # Pasamos a bytes el question_dns_mensaje
+    question_dns_mensaje_byte = bytes(question_dns_mensaje.pack())
+    # Enviamos el mensaje DNS a nameserver con el ip_addr
+    dns_reply_byte = send_dns_message(question_dns_mensaje_byte, ip_addr, 53)
+    # le pedimos a dnslib que haga el trabajo de parsing por nosotros
+    dns_reply = dns_parser(dns_reply_byte)
+    # Mantenemos el ID del header del cliente
+    dns_reply.header.id = dns_request.header.id
+
+    return bytes(dns_reply.pack())
 
 def print_dns_message(dnslib_reply):
     # header section
@@ -174,32 +187,21 @@ if __name__ == "__main__":
 
     try:
         while True:
+            # Recibimos de cliente
             data, client_address = server_socket.recvfrom(BUFFER_SIZE)
 
             print("\n\n\n\n----------------------------------------")
             print("----------------------------------------")
             print("MENSAJE DNS RECIBIDO")
             print(f"CLIENTE: {client_address}")
-            dns_request = dns_parser(data)
-            print_dns_message(dns_request)
 
-            # query_name = str(dns_request.q.qname)
+            dns_reply = resolver(data)
 
-            # dns_reply = send_dns_message(query_name, "1.1.1.1", 53)
-            # print("\n\n\n\n----------------------------------------")
-            # print("----------------------------------------")
-            # print("MENSAJE DNS ENVIADO A NAMESERVER")
-            # print_dns_message(dns_reply)
-
-            # print("\n\n\n\n----------------------------------------")
-            # print("----------------------------------------")
-            # print(f"\n\nRESPUESTA DNS ENVIADO A NAMESERVER A {client_address}")
-            # print_dns_message(dns_reply)
-            # dns_reply.header.id = dns_request.header.id
-            # server_socket.sendto(
-            #     dns_reply.pack(),
-            #     client_address
-            # )
+            # Enviamos a cliente
+            server_socket.sendto(
+                dns_reply,
+                client_address
+            )
 
     finally:
         server_socket.close()
