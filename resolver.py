@@ -2,6 +2,7 @@ import socket
 from dnslib import DNSRecord
 from dnslib.dns import CLASS, QTYPE
 import dnslib
+from dnslib.dns import RR, A
 
 IP = "192.168.40.115"
 PORT = 8000
@@ -40,10 +41,11 @@ def cache_domain(domain, ip):
 
     if domain in top3:
         cache[domain] = ip
-
+ 
 
 def cache_get_domain_ip(domain):
-    return cache.get(domain)
+    ip = cache.get(domain)
+    return ip
 
 def dns_parser(data):
     return DNSRecord.parse(data)
@@ -62,8 +64,11 @@ def send_dns_message(message: bytes, address, port) -> bytes:
     # Ojo que los datos de la respuesta van en en una estructura de datos
     return data
 
-def dns_debug(domain, nameserver, ip):
-    print(f"(debug) Consultando '{domain}' a '{nameserver}' con dirección IP '{ip}'")
+def dns_debug(domain, nameserver = None, ip = None):
+    if not nameserver and not ip:
+        print(f"(debug) Consultando '{domain}' a cache del resolver")
+    else:
+        print(f"(debug) Consultando '{domain}' a '{nameserver}' con dirección IP '{ip}'")       
 
 def resolver(mensaje_consulta: bytes, ip_addr) -> bytes:
     # Convertimos mensaje_consulta en byte a la estructura de datos de DNSLibs
@@ -89,7 +94,7 @@ def resolver(mensaje_consulta: bytes, ip_addr) -> bytes:
     number_of_answer_elements = dns_reply.header.a
     if number_of_answer_elements > 0:
         for answer in dns_reply.rr:    
-            if QTYPE.get(answer.rtype) == "A":                
+            if QTYPE.get(answer.rtype) == "A":     
                 return dns_reply_byte
 
     # C de parte 4
@@ -289,11 +294,32 @@ if __name__ == "__main__":
             # Recibimos de cliente
             data, client_address = server_socket.recvfrom(BUFFER_SIZE)
 
-            dns_reply = resolver(data, DNS_SERVER_IP)
+            # Datos necesario para usar cache
+            data_request = dns_parser(data)
+            qname = data_request.q.qname
+            domain = str(qname)
+            # Obtener cache
+            cached_ip = cache_get_domain_ip(domain)
+            if cached_ip is not None:
+                # Crear mensaje con cache obtenido
+                dns_debug(domain)
+                dns_reply = data_request.reply()
+                dns_reply.add_answer(RR(qname, QTYPE.A, rdata=A(cached_ip)))
+                dns_reply_byte = bytes(dns_reply.pack())
+            else:
+                # Usar resolver
+                dns_reply_byte = resolver(data, DNS_SERVER_IP)
+
+            # Actualizar cache
+            dns_reply = dns_parser(dns_reply_byte)
+            for answer in dns_reply.rr:
+                if QTYPE.get(answer.rtype) == "A":
+                    ip = str(answer.rdata)
+                    cache_domain(domain, ip)
 
             # Enviamos a cliente
             server_socket.sendto(
-                dns_reply,
+                dns_reply_byte,
                 client_address
             )
 
