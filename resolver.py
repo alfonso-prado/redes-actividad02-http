@@ -10,39 +10,64 @@ BUFFER_SIZE = 4096
 DNS_SERVER_IP="199.7.83.42"
 DNS_SERVER_NAMESERVER="."
 
+# Diccionario que guarda los últimos 3 dominios que más se repiten.
+# La key es el dominio y el value es la ip
 cache = dict()
+# Cola que contiene las última 20 consultas.
 last_20_domains = []
+# Contador de dominios, cuenta de las última 20 consultas
+# que dominios son los más consultados
+# La key es el dominio y el value es la cantidad de veces que se ha consultado
 domain_counts = dict()
 
+# Esta funcion actualiza cache, last_20_domains y domains_counts
+# con el dominio consultado. La función se llama cada vez que 
+# se consulta un dominio.
+# Si el dominio consultado queda en los top 3 la función
+# actualiza el cache con el dominio y su ip
 def cache_domain(domain, ip):
+    # Agrega al principio de la cola el dominio entrante
     last_20_domains.append(domain)
+    # Suma uno al dominio que está en domain_counts, con eso se tiene un registro 
+    # de los dominios más consultados dentro de las últimas 20 consultas
     domain_counts[domain] = domain_counts.get(domain, 0) + 1
-    
+
+    # Si la cola tiene más de 20 elementos se elimina la consulta más antigua
     if len(last_20_domains) > 20:
         domain_removed = last_20_domains.pop(0)
+        # Gestión del contador de los dominios más consultados (domain_counts)
         if domain_removed not in last_20_domains: 
+            # Para el caso de que si el dominio no se encuentra en last_20_domains
+            # se elimina de domain_removed
             domain_counts.pop(domain_removed, None)
         else:
+            # En caso contrario se disminuye en uno
             counts = domain_counts.get(domain_removed) - 1
             domain_counts[domain_removed] = counts
 
+    # Creamos una lista ordenada de los dominios mas consultados a los menos consultados.
     ordered_domains = sorted(
         domain_counts,
         key=domain_counts.get,
         reverse=True
     )
 
+    # Obtenemos los 3 dominios más consultados
     top3 = ordered_domains[:3]
 
+    # Obtenemos los dominios en cache que ya no son los más consultados
     expire_domains = set(cache) - set(top3) 
 
+    # Eliminamos esos dominios del cache
     for expire_domain in expire_domains:
         cache.pop(expire_domain, None)
 
+    # Si el nuevo dominio consultado está en el top 3, entonces 
+    # lo agregamos al cache
     if domain in top3:
         cache[domain] = ip
  
-
+# Obtiene el ip del dominio almacenado en el cache, si no está en cache devuelve None
 def cache_get_domain_ip(domain):
     ip = cache.get(domain)
     return ip
@@ -301,13 +326,13 @@ if __name__ == "__main__":
             # Obtener cache
             cached_ip = cache_get_domain_ip(domain)
             if cached_ip is not None:
-                # Crear mensaje con cache obtenido
+                # Crear mensaje DNS con el cache obtenido
                 dns_debug(domain)
                 dns_reply = data_request.reply()
                 dns_reply.add_answer(RR(qname, QTYPE.A, rdata=A(cached_ip)))
                 dns_reply_byte = bytes(dns_reply.pack())
             else:
-                # Usar resolver
+                # Usar resolver si no está el dominio en el cache
                 dns_reply_byte = resolver(data, DNS_SERVER_IP)
 
             # Actualizar cache
