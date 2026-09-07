@@ -72,7 +72,7 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
                             # Obtenemos la ip del mensaje de consulta
                             return resolver(mensaje_consulta, ns_ip)
 
-                # Si se llega hasta aqui es porque no se consiguio un registro A con la IP del NS en Additional
+                # Si se llega hasta aqui es porque no existe Additional con un registro A con la IP del NS 
                 # Caso C.II: resuelve la ip del NS
                 # Creamos el RR para hacer la question sobre la ip del nameserver
                 ns_query = DNSRecord.question(nameserver)
@@ -87,11 +87,10 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
                         # Obtenemos la ip del mensaje de consulta
                         return resolver(mensaje_consulta, ns_ip)
 
-
+    # Caso D si recibe algún otro tipo de respuesta simplemente la ignora
+    # Que se comentan las siguiente lineas a continuacion
     # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB DESPUES DE ENVIARLO
-
     # dns_reply_byte = bytes(dns_reply.pack())
-
     # return dns_reply_byte
 
 def print_dns_message(dnslib_reply):
