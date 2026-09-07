@@ -9,6 +9,42 @@ BUFFER_SIZE = 4096
 DNS_SERVER_IP="199.7.83.42"
 DNS_SERVER_NAMESERVER="."
 
+cache = dict()
+last_20_domains = []
+domain_counts = dict()
+
+def cache_domain(domain, ip):
+    last_20_domains.append(domain)
+    domain_counts[domain] = domain_counts.get(domain, 0) + 1
+    
+    if len(last_20_domains) > 20:
+        domain_removed = last_20_domains.pop(0)
+        if domain_removed not in last_20_domains: 
+            domain_counts.pop(domain_removed, None)
+        else:
+            counts = domain_counts.get(domain_removed) - 1
+            domain_counts[domain_removed] = counts
+
+    ordered_domains = sorted(
+        domain_counts,
+        key=domain_counts.get,
+        reverse=True
+    )
+
+    top3 = ordered_domains[:3]
+
+    expire_domains = set(cache) - set(top3) 
+
+    for expire_domain in expire_domains:
+        cache.pop(expire_domain, None)
+
+    if domain in top3:
+        cache[domain] = ip
+
+
+def cache_get_domain_ip(domain):
+    return cache.get(domain)
+
 def dns_parser(data):
     return DNSRecord.parse(data)
 
