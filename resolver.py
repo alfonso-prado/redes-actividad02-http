@@ -42,8 +42,8 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
     # Si encuentra RR A en Answer termina y vuelve resultado
     number_of_answer_elements = dns_reply.header.a
     if number_of_answer_elements > 0:
-        for rr in dns_reply.rr:    
-            if QTYPE.get(rr.rtype) == "A":
+        for answer in dns_reply.rr:    
+            if QTYPE.get(answer.rtype) == "A":
                 return dns_reply_byte
 
     # C de parte 4
@@ -54,27 +54,45 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
         # Los RR de auth para el caso NS son de la forma por ej:
         # ejemplo.cl.   NS   ns1.ejemplo.cl.
         for auth in dns_reply.auth:
-            nameserver = str(auth.rdata)  
+            # Caso C.I: busca IP en Additional
+            # El RR de auth es NS y existe al menos un RR additional
+            if QTYPE.get(auth.rtype) == "NS": 
+                nameserver = str(auth.rdata) 
 
-            # El RR de auth es NS y existe al menos un additional
-            number_of_additional_elements = dns_reply.header.ar
-            if QTYPE.get(auth.rtype) == "NS" and number_of_additional_elements > 0: 
                 # Los RR de additional para el caso de A son de la forma por ej:
                 # ns1.ejemplo.cl.   A   1.2.3.4
-                for additional in dns_reply.ar:
-                    # Dato adiccional que tiene RR tipo A que contiene la IP del NS
-                    rname = str(additional.rname) 
-                    # Tiene que ser RR A pero tambien tiene que tener mismo rname que nameserver
-                    if QTYPE.get(additional.rtype) == "A" and rname == nameserver:
-                        ns_ip = str(additional.rdata)
+                number_of_additional_elements = dns_reply.header.ar
+                if number_of_additional_elements > 0:
+                    for additional in dns_reply.ar:
+                        # Dato adiccional que tiene RR tipo A que contiene la IP del NS
+                        rname = str(additional.rname) 
+                        # Tiene que ser RR A pero tambien tiene que tener mismo rname que nameserver
+                        if QTYPE.get(additional.rtype) == "A" and rname == nameserver:
+                            ns_ip = str(additional.rdata)
+                            # Obtenemos la ip del mensaje de consulta
+                            return resolver(mensaje_consulta, ns_ip)
 
+                # Si se llega hasta aqui es porque no se consiguio un registro A con la IP del NS en Additional
+                # Caso C.II: resuelve la ip del NS
+                # Creamos el RR para hacer la question sobre la ip del nameserver
+                ns_query = DNSRecord.question(nameserver)
+                ns_query_byte = bytes(ns_query.pack())
+
+                ns_reply_byte = resolver(ns_query_byte)
+                ns_reply = dns_parser(ns_reply_byte)
+
+                for answer in ns_reply.rr:
+                    if QTYPE.get(answer.rtype) == "A":
+                        ns_ip = str(answer.rdata)
+                        # Obtenemos la ip del mensaje de consulta
                         return resolver(mensaje_consulta, ns_ip)
+
 
     # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB DESPUES DE ENVIARLO
 
-    dns_reply_byte = bytes(dns_reply.pack())
+    # dns_reply_byte = bytes(dns_reply.pack())
 
-    return dns_reply_byte
+    # return dns_reply_byte
 
 def print_dns_message(dnslib_reply):
     # header section
