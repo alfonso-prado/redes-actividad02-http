@@ -46,13 +46,23 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
                 return dns_reply_byte
 
     # C de parte 4
+    # Sucede cuando no anwer no tiene RR A pero si Auth tine RR NS
+    # Significa que está delegando a otro nameserver
     number_of_authority_elements = dns_reply.header.auth
     if number_of_authority_elements > 0:
+        # Los RR de auth para el caso NS son de la forma por ej:
+        # ejemplo.cl.   NS   ns1.ejemplo.cl.
         for auth in dns_reply.auth:
-            if QTYPE.get(auth.rtype) == "NS":
+            nameserver = str(auth.rdata)  
+
+            if QTYPE.get(auth.rtype) == "NS": 
+                # Los RR de additional para el caso de A son de la forma por ej:
+                # ns1.ejemplo.cl.   A   1.2.3.4
                 for additional in dns_reply.ar:
                     # Dato adiccional que tiene RR tipo A que contiene la IP del NS
-                    if QTYPE.get(additional.rtype) == "A":
+                    rname = str(additional.rname) 
+                    # Tiene que ser RR A pero tambien tiene que tener mismo rname que nameserver
+                    if QTYPE.get(additional.rtype) == "A" and rname == nameserver:
                         ns_ip = str(additional.rdata)
 
                         return resolver(mensaje_consulta, ns_ip)
