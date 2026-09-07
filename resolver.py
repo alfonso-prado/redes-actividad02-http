@@ -39,6 +39,7 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
     dns_reply = dns_parser(dns_reply_byte)
 
     # B de parte 4
+    # Si encuentra RR A en Answer termina y vuelve resultado
     number_of_answer_elements = dns_reply.header.a
     if number_of_answer_elements > 0:
         for rr in dns_reply.rr:    
@@ -55,7 +56,9 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
         for auth in dns_reply.auth:
             nameserver = str(auth.rdata)  
 
-            if QTYPE.get(auth.rtype) == "NS": 
+            # El RR de auth es NS y existe al menos un additional
+            number_of_additional_elements = dns_reply.header.ar
+            if QTYPE.get(auth.rtype) == "NS" and number_of_additional_elements > 0: 
                 # Los RR de additional para el caso de A son de la forma por ej:
                 # ns1.ejemplo.cl.   A   1.2.3.4
                 for additional in dns_reply.ar:
