@@ -155,7 +155,7 @@ def resolver(mensaje_consulta: bytes, ip_addr) -> bytes:
                 ns_query = DNSRecord.question(nameserver)
                 ns_query_byte = bytes(ns_query.pack())
 
-                ns_reply_byte = resolver(ns_query_byte)
+                ns_reply_byte = resolver(ns_query_byte, DNS_SERVER_IP)
                 ns_reply = dns_parser(ns_reply_byte)
 
                 for answer in ns_reply.rr:
