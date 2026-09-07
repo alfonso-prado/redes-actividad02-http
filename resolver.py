@@ -6,6 +6,8 @@ import dnslib
 IP = "192.168.40.115"
 PORT = 8000
 BUFFER_SIZE = 4096
+DNS_SERVER_IP="199.7.83.42"
+DNS_SERVER_NAMESERVER="."
 
 def dns_parser(data):
     return DNSRecord.parse(data)
@@ -24,9 +26,17 @@ def send_dns_message(message: bytes, address, port) -> bytes:
     # Ojo que los datos de la respuesta van en en una estructura de datos
     return data
 
-def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
+def dns_debug(domain, nameserver, ip):
+    print(f"(debug) Consultando '{domain}' a '{nameserver}' con dirección IP '{ip}'")
+
+def resolver(mensaje_consulta: bytes, ip_addr) -> bytes:
     # Convertimos mensaje_consulta en byte a la estructura de datos de DNSLibs
     dns_request = dns_parser(mensaje_consulta)
+
+    # DEBUG
+    domain = str(dns_request.q.qname)
+    if ip_addr == DNS_SERVER_IP:
+        dns_debug(domain, DNS_SERVER_NAMESERVER, ip_addr)
 
     # AQUI PUDEMOS VER/MODIFICAR EL MENSAJE DNS USANDO LA LIBRERIA DNSLIB ANTES DE ENVIARLO
 
@@ -43,7 +53,7 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
     number_of_answer_elements = dns_reply.header.a
     if number_of_answer_elements > 0:
         for answer in dns_reply.rr:    
-            if QTYPE.get(answer.rtype) == "A":
+            if QTYPE.get(answer.rtype) == "A":                
                 return dns_reply_byte
 
     # C de parte 4
@@ -69,6 +79,7 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
                         # Tiene que ser RR A pero tambien tiene que tener mismo rname que nameserver
                         if QTYPE.get(additional.rtype) == "A" and rname == nameserver:
                             ns_ip = str(additional.rdata)
+                            dns_debug(domain, nameserver, ns_ip)
                             # Obtenemos la ip del mensaje de consulta
                             return resolver(mensaje_consulta, ns_ip)
 
@@ -84,6 +95,7 @@ def resolver(mensaje_consulta: bytes, ip_addr="1.1.1.1") -> bytes:
                 for answer in ns_reply.rr:
                     if QTYPE.get(answer.rtype) == "A":
                         ns_ip = str(answer.rdata)
+                        dns_debug(domain, nameserver, ns_ip)
                         # Obtenemos la ip del mensaje de consulta
                         return resolver(mensaje_consulta, ns_ip)
 
@@ -234,19 +246,14 @@ if __name__ == "__main__":
     socket_address = (IP, PORT)
     server_socket.bind(socket_address)
 
-    print(f'SERVER DNS -> {IP}:{PORT}')
+    print(f'RESOLVER DNS ON -> {IP}:{PORT}')
 
     try:
         while True:
             # Recibimos de cliente
             data, client_address = server_socket.recvfrom(BUFFER_SIZE)
 
-            print("\n\n\n\n----------------------------------------")
-            print("----------------------------------------")
-            print("MENSAJE DNS RECIBIDO")
-            print(f"CLIENTE: {client_address}")
-
-            dns_reply = resolver(data)
+            dns_reply = resolver(data, DNS_SERVER_IP)
 
             # Enviamos a cliente
             server_socket.sendto(
